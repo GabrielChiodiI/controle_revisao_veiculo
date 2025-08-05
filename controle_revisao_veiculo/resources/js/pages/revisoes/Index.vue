@@ -1,0 +1,158 @@
+<template>
+  <DefaultLayout>
+    <div class="container mt-5">
+      <form @submit.prevent="submit" class="mb-5 border rounded p-4 shadow-sm">
+        <h2 class="mb-4">Cadastrar Revisão</h2>
+        <div class="row mb-2">
+          <div class="col">
+            <input v-model="form.data_inicio" type="datetime-local" class="form-control" required placeholder="Data e Hora Início">
+          </div>
+          <div class="col">
+            <input v-model="form.quilometragem" type="number" class="form-control" required placeholder="Quilometragem">
+          </div>
+        </div>
+
+        <!-- Serviços -->
+        <div v-for="(servico, i) in form.servicos" :key="i" class="border p-3 my-2 rounded">
+          <h5>Serviço {{ i + 1 }}</h5>
+          <div class="row mb-2">
+            <div class="col">
+              <input v-model="servico.descricao" type="text" class="form-control" required placeholder="Descrição do Serviço">
+            </div>
+            <div class="col">
+              <input v-model="servico.valor_mao_de_obra" type="number" class="form-control" required placeholder="Valor Mão de Obra">
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-danger" type="button" @click="removerServico(i)">Remover</button>
+            </div>
+          </div>
+          <!-- Peças para este serviço -->
+          <div v-for="(peca, j) in servico.pecas" :key="j" class="row mb-2 align-items-end">
+            <div class="col">
+              <input v-model="peca.descricao" type="text" class="form-control" required placeholder="Descrição da Peça">
+            </div>
+            <div class="col">
+              <input v-model="peca.quantidade" type="number" class="form-control" required placeholder="Quantidade">
+            </div>
+            <div class="col">
+              <input v-model="peca.preco" type="number" class="form-control" required placeholder="Preço">
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-outline-danger" type="button" @click="removerPeca(i, j)">-</button>
+            </div>
+          </div>
+          <button class="btn btn-outline-primary mb-2" type="button" @click="adicionarPeca(i)">Adicionar Peça</button>
+        </div>
+        <button class="btn btn-outline-success my-2" type="button" @click="adicionarServico">Adicionar Serviço</button>
+        <div>
+          <button type="submit" class="btn btn-primary mt-3">Cadastrar Revisão</button>
+        </div>
+      </form>
+
+      <!-- Tabela Revisões em andamento -->
+      <h1 class="mb-4">Revisões em andamento</h1>
+      <table class="table table-striped table-bordered mb-5">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Data Início</th>
+            <th>Quilometragem</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="rev in revisoesAndamento" :key="rev.id_revisao">
+            <td>{{ rev.id_revisao }}</td>
+            <td>{{ rev.data_inicio }}</td>
+            <td>{{ rev.quilometragem }}</td>
+            <td>
+              <button class="btn btn-success btn-sm" @click="finalizarRevisao(rev.id_revisao)">
+                Finalizar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="!revisoesAndamento.length" class="alert alert-info">Nenhuma revisão em andamento.</div>
+
+      <!-- Tabela Revisões finalizadas -->
+      <h1 class="mb-4">Revisões finalizadas</h1>
+      <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Data Início</th>
+            <th>Data Fim</th>
+            <th>Quilometragem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="rev in revisoesFinalizadas" :key="rev.id_revisao">
+            <td>{{ rev.id_revisao }}</td>
+            <td>{{ rev.data_inicio }}</td>
+            <td>{{ rev.data_fim }}</td>
+            <td>{{ rev.quilometragem }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="!revisoesFinalizadas.length" class="alert alert-info">Nenhuma revisão finalizada.</div>
+    </div>
+  </DefaultLayout>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useForm } from '@inertiajs/vue3'
+import { Inertia } from '@inertiajs/inertia'
+import DefaultLayout from '../../layouts/DefaultLayout.vue' // <-- caminho correto
+
+const props = defineProps({
+  revisoes: {
+    type: Array,
+    required: true
+  }
+})
+
+const revisoesAndamento = computed(() =>
+  props.revisoes.filter(r => !r.data_fim)
+)
+const revisoesFinalizadas = computed(() =>
+  props.revisoes.filter(r => !!r.data_fim)
+)
+
+const form = useForm({
+  data_inicio: '',
+  quilometragem: '',
+  servicos: [
+    {
+      descricao: '',
+      valor_mao_de_obra: '',
+      pecas: []
+    }
+  ]
+})
+
+function adicionarServico() {
+  form.servicos.push({ descricao: '', valor_mao_de_obra: '', pecas: [] })
+}
+function removerServico(idx) {
+  form.servicos.splice(idx, 1)
+}
+function adicionarPeca(idx) {
+  form.servicos[idx].pecas.push({ descricao: '', quantidade: '', preco: '' })
+}
+function removerPeca(idx, jdx) {
+  form.servicos[idx].pecas.splice(jdx, 1)
+}
+
+function submit() {
+  form.post('/revisoes', {
+    onSuccess: () => form.reset()
+  })
+}
+
+function finalizarRevisao(id) {
+  Inertia.post(`/revisoes/${id}/finalizar`)
+}
+</script>
+
