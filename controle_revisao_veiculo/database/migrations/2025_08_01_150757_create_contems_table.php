@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('fk_revisao_id_revisao');
             $table->primary(['fk_servico_id_servico', 'fk_revisao_id_revisao']);
             $table->foreign('fk_servico_id_servico')->references('id_servico')->on('servicos')->onDelete('restrict');
-            $table->foreign('fk_revisao_id_revisao')->references('id_revisao')->on('revisoes')->onDelete('set null');
+            $table->foreign('fk_revisao_id_revisao')->references('id_revisao')->on('revisoes')->onDelete('cascade');
             $table->timestamps();
         });
     }

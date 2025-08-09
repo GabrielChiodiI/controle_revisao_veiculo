@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('modelo', 20);
             $table->integer('ano');
             $table->unsignedBigInteger('fk_cliente_id_cliente');
-            $table->foreign('fk_cliente_id_cliente')->references('id_cliente')->on('clientes')->onDelete('restrict');
+            $table->foreign('fk_cliente_id_cliente')->references('id_cliente')->on('clientes')->onDelete('cascade');
             $table->timestamps();
         });
     }

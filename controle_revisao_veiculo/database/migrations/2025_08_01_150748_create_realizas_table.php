@@ -15,8 +15,8 @@ return new class extends Migration
             $table->string('fk_veiculo_placa', 15);
             $table->unsignedBigInteger('fk_revisao_id_revisao');
             $table->primary(['fk_veiculo_placa', 'fk_revisao_id_revisao']);
-            $table->foreign('fk_veiculo_placa')->references('placa')->on('veiculos')->onDelete('restrict');
-            $table->foreign('fk_revisao_id_revisao')->references('id_revisao')->on('revisoes')->onDelete('set null');
+            $table->foreign('fk_veiculo_placa')->references('placa')->on('veiculos')->onDelete('cascade');
+            $table->foreign('fk_revisao_id_revisao')->references('id_revisao')->on('revisoes')->onDelete('cascade');
             $table->timestamps();
         });
     }

@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('cpf', 11);
             $table->string('telefone', 20);
             $table->string('email', 50);
-            $table->date('data_nascimento')->nullable();
-            $table->string('sexo', 20)->nullable();
+            $table->date('data_nascimento');
+            $table->string('sexo', 20);
             $table->timestamps();
         });
     }

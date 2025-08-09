@@ -15,16 +15,19 @@ class RevisaoSeeder extends Seeder
     public function run(): void
     {
         DB::table('revisoes')->insert([
-            ['data_inicio' => '2025-01-10 08:00:00', 'data_fim' => '09:00:00', 'quilometragem' => 20000],
-            ['data_inicio' => '2025-01-11 09:00:00', 'data_fim' => '10:15:00', 'quilometragem' => 15000],
-            ['data_inicio' => '2025-01-12 10:00:00', 'data_fim' => '11:00:00', 'quilometragem' => 22000],
-            ['data_inicio' => '2025-01-13 11:00:00', 'data_fim' => '12:00:00', 'quilometragem' => 12000],
-            ['data_inicio' => '2025-01-14 08:30:00', 'data_fim' => '09:45:00', 'quilometragem' => 18500],
-            ['data_inicio' => '2025-01-15 09:20:00', 'data_fim' => '10:30:00', 'quilometragem' => 25000],
-            ['data_inicio' => '2025-01-16 10:45:00', 'data_fim' => '11:55:00', 'quilometragem' => 14000],
-            ['data_inicio' => '2025-01-17 13:00:00', 'data_fim' => '14:00:00', 'quilometragem' => 17000],
-            ['data_inicio' => '2025-01-18 14:10:00', 'data_fim' => '15:20:00', 'quilometragem' => 30000],
-            ['data_inicio' => '2025-01-19 15:15:00', 'data_fim' => '16:25:00', 'quilometragem' => 27000],
+            ['data_inicio' => '2025-01-10 08:00:00', 'data_fim' => '2025-01-10 09:00:00', 'quilometragem' => 20000],
+            ['data_inicio' => '2025-01-11 09:00:00', 'data_fim' => '2025-01-11 10:15:00', 'quilometragem' => 15000],
+            ['data_inicio' => '2025-01-12 10:00:00', 'data_fim' => '2025-01-12 11:00:00', 'quilometragem' => 22000],
+            ['data_inicio' => '2025-01-13 11:00:00', 'data_fim' => '2025-01-13 12:00:00', 'quilometragem' => 12000],
+            ['data_inicio' => '2025-01-14 08:30:00', 'data_fim' => '2025-01-14 09:45:00', 'quilometragem' => 18500],
+            ['data_inicio' => '2025-01-15 09:20:00', 'data_fim' => '2025-01-15 10:30:00', 'quilometragem' => 25000],
+            ['data_inicio' => '2025-01-16 10:45:00', 'data_fim' => '2025-01-16 11:55:00', 'quilometragem' => 14000],
+            ['data_inicio' => '2025-01-17 13:00:00', 'data_fim' => '2025-01-17 14:00:00', 'quilometragem' => 17000],
+            ['data_inicio' => '2025-01-18 14:10:00', 'data_fim' => '2025-01-18 15:20:00', 'quilometragem' => 30000],
+            ['data_inicio' => '2025-01-19 15:15:00', 'data_fim' => '2025-01-19 16:25:00', 'quilometragem' => 27000],
+            ['data_inicio' => '2025-02-10 08:00:00', 'data_fim' => '2025-02-10 09:00:00', 'quilometragem' => 21000],
+            ['data_inicio' => '2025-02-11 09:00:00', 'data_fim' => '2025-02-11 10:15:00', 'quilometragem' => 15500],
+            ['data_inicio' => '2025-02-12 10:00:00', 'data_fim' => '2025-02-12 11:00:00', 'quilometragem' => 22500],
         ]);
     }
 }

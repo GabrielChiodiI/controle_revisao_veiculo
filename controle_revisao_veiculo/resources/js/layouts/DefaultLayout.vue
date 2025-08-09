@@ -30,7 +30,7 @@
           </button>
           <button @click="logout" :disabled="processing" class="btn btn-secondary ms-2 d-flex align-items-center">
             <i class="bi bi-box-arrow-right me-2" style="font-size:1.2rem;"></i>
-            Logout
+            Sair
           </button>
         </div>
       </header>
@@ -44,7 +44,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 
 const processing = ref(false)
 const error = ref('')

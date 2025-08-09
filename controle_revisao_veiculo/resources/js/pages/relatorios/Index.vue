@@ -8,21 +8,34 @@
           <label class="form-label">Escolha o relatório</label>
           <select v-model="relatorioSelecionado" class="form-select">
             <option disabled value="">Selecione...</option>
-            <option value="pessoasPorSexo">Pessoas por Sexo (Média Idade)</option>
-            <option value="veiculosPorPessoa">Veículos por Pessoa</option>
-            <option value="maisVeiculosPorSexo">Mais Veículos por Sexo</option>
-            <option value="marcasOrdenadas">Marcas Ordenadas</option>
-            <option value="marcasPorSexo">Marcas por Sexo</option>
-            <option value="revisoesPorPeriodo">Revisões por Período</option>
-            <option value="marcasMaisRevisoes">Marcas com Mais Revisões</option>
-            <option value="pessoasMaisRevisoes">Pessoas com Mais Revisões</option>
-            <option value="mediaTempoEntreRevisoes">Média Tempo Entre Revisões (Pessoa)</option>
-            <option value="proximaRevisaoPorPessoa">Próxima Revisão por Pessoa</option>
+            <option value="todosVeiculos">Todos os Veículos</option>
+            <option value="todosVeiculosPorPessoa">Todos Veículos por Pessoa</option>
+            <option value="maisVeiculosPorSexo">Sexo com Mais Veículos</option>
+            <option value="marcasPorNumeroVeiculos">Marcas Ordenadas por Qtd. Veículos</option>
+            <option value="marcasQuantidadePorSexo">Marcas por Qtd. Separadas por Sexo</option>
+            <option value="todasPessoas">Todas as Pessoas</option>
+            <option value="pessoasPorSexoComMediaIdade">Pessoas por Sexo (Média de Idade)</option>
+            <option value="revisoesPorPeriodo">Revisões Realizadas em um Período</option>
+            <option value="marcasComMaisRevisoes">Marcas com Mais Revisões</option>
+            <option value="pessoasComMaisRevisoes">Pessoas com Mais Revisões</option>
+            <option value="mediaTempoEntreRevisoes">Média de Tempo Entre Revisões por Pessoa</option>
+            <option value="proximaRevisaoPorPessoa">Próxima Revisão Base no Tempo Médio do Cliente</option>
           </select>
         </div>
         <button class="btn btn-primary" @click="gerarRelatorio" :disabled="!relatorioSelecionado">
           Gerar Relatório
         </button>
+      </div>
+
+      <div v-if="relatorioSelecionado === 'revisoesPorPeriodo'" class="d-flex gap-2 align-items-end">
+        <div>
+          <label class="form-label mb-0">Data inicial</label>
+          <input type="date" class="form-control" v-model="periodo.inicio">
+        </div>
+        <div>
+          <label class="form-label mb-0">Data final</label>
+          <input type="date" class="form-control" v-model="periodo.fim">
+        </div>
       </div>
 
       <!-- Parte de baixo: tabela de dados -->
@@ -46,13 +59,84 @@
       <div v-else-if="dados && !Array.isArray(dados)" class="alert alert-info mt-3">
         {{ dados }}
       </div>
-      <!-- Gráfico de barras só para Pessoas por Sexo -->
+      <!-- Gráficos -->
       <div
-        v-if="relatorioSelecionado === 'pessoasPorSexo' && dados && Array.isArray(dados) && dados.length"
+        v-if="relatorioSelecionado === 'pessoasPorSexoComMediaIdade' && dados && Array.isArray(dados) && dados.length"
         class="mt-4"
       >
         <h5 class="text-center mb-3">Gráfico: Pessoas por Sexo</h5>
-        <BarChart :data="dados" />
+        <div class="d-flex justify-content-center">
+          <DoubleBarChart :data="dados" />
+        </div>
+      </div>
+      <div
+        v-if="relatorioSelecionado === 'todosVeiculos' && dados && Array.isArray(dados) && dados.length"
+        class="mt-4"
+      >
+        <h5 class="text-center mb-3">Distribuição dos Veículos por Marca</h5>
+          <div class="d-flex justify-content-center">
+            <PieChart :data="dados" />
+          </div>
+      </div>
+      <div class="d-flex justify-content-center">
+        <GroupBarChart
+          :data="dados"
+          v-if="relatorioSelecionado === 'marcasQuantidadePorSexo' && dados && Array.isArray(dados) && dados.length"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <ScatterPlotChartRevisoes
+          v-if="relatorioSelecionado === 'revisoesPorPeriodo' && dados && Array.isArray(dados) && dados.length"
+          :data="dados"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <IcicleChart
+          :data="dados"
+          v-if="relatorioSelecionado === 'todosVeiculosPorPessoa' && dados && Array.isArray(dados) && dados.length"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <ScatterPlotChart
+          :data="dados"
+          v-if="relatorioSelecionado === 'proximaRevisaoPorPessoa' && dados && Array.isArray(dados) && dados.length"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <BarChart
+          v-if="relatorioSelecionado === 'marcasPorNumeroVeiculos' && dados && Array.isArray(dados) && dados.length"
+          :data="dados"
+          xKey="Marca"
+          yKey="Quantidade"
+          label="Veículos por Marca"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <BarChart
+          v-if="relatorioSelecionado === 'marcasComMaisRevisoes' && dados && Array.isArray(dados) && dados.length"
+          :data="dados"
+          xKey="Marca"
+          yKey="Total"
+          label="Revisões por Marca"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <BarChart
+          v-if="relatorioSelecionado === 'pessoasComMaisRevisoes' && dados && Array.isArray(dados) && dados.length"
+          :data="dados"
+          xKey="Pessoa"
+          yKey="Quantidade"
+          label="Revisões por Pessoa"
+        />
+      </div>
+      <div class="d-flex justify-content-center">
+        <BarChart
+          v-if="relatorioSelecionado === 'mediaTempoEntreRevisoes' && dados && Array.isArray(dados) && dados.length"
+          :data="dados"
+          xKey="Cliente"
+          yKey="Media de Tempo em Dias"
+          label="Média de Tempo Entre Revisões (Dias)"
+        />
       </div>
     </div>
   </DefaultLayout>
@@ -62,47 +146,58 @@
 import { ref, computed } from 'vue'
 import DefaultLayout from '../../layouts/DefaultLayout.vue'
 import BarChart from './BarChart.vue'
+import DoubleBarChart from './DoubleBarChart.vue'
+import PieChart from './PieChart.vue'
+import IcicleChart from './IcicleChart.vue'
+import GroupBarChart from './GroupBarChart.vue'
+import ScatterPlotChart from './ScatterPlotChart.vue'
+import ScatterPlotChartRevisoes from './ScatterPlotChartRevisoes.vue'
 
 const dados = ref(null)
 const relatorioSelecionado = ref('')
-const idPessoa = 1
-const periodo = { inicio: '2024-01-01', fim: '2024-12-31' }
+const periodo = ref({ inicio: '2025-01-01', fim: '2025-08-07' })
 
 async function gerarRelatorio() {
   let url = ''
   let params = {}
 
   switch (relatorioSelecionado.value) {
-    case 'pessoasPorSexo':
-      url = '/relatorios/pessoas-por-sexo'
+    case 'todosVeiculos':
+      url = '/relatorios/todos-veiculos'
       break
-    case 'veiculosPorPessoa':
+    case 'todosVeiculosPorPessoa':
       url = '/relatorios/veiculos-por-pessoa'
       break
     case 'maisVeiculosPorSexo':
       url = '/relatorios/mais-veiculos-por-sexo'
       break
-    case 'marcasOrdenadas':
+    case 'marcasPorNumeroVeiculos':
       url = '/relatorios/marcas-ordenadas'
       break
-    case 'marcasPorSexo':
-      url = '/relatorios/marcas-por-sexo'
+    case 'marcasQuantidadePorSexo':
+      url = '/relatorios/marcas-quantidade-por-sexo'
+      break
+    case 'todasPessoas':
+      url = '/relatorios/todas-pessoas'
+      break
+    case 'pessoasPorSexoComMediaIdade':
+      url = '/relatorios/pessoas-por-sexo'
       break
     case 'revisoesPorPeriodo':
       url = '/relatorios/revisoes-por-periodo'
-      params = { inicio: periodo.inicio, fim: periodo.fim }
+      params = { inicio: periodo.value.inicio, fim: periodo.value.fim }
       break
-    case 'marcasMaisRevisoes':
+    case 'marcasComMaisRevisoes':
       url = '/relatorios/marcas-mais-revisoes'
       break
-    case 'pessoasMaisRevisoes':
+    case 'pessoasComMaisRevisoes':
       url = '/relatorios/pessoas-mais-revisoes'
       break
     case 'mediaTempoEntreRevisoes':
-      url = `/relatorios/media-tempo-entre-revisoes/${idPessoa}`
+      url = `/relatorios/media-tempo-entre-revisoes`
       break
     case 'proximaRevisaoPorPessoa':
-      url = `/relatorios/proxima-revisao/${idPessoa}`
+      url = `/relatorios/proxima-revisao`
       break
     default:
       dados.value = null

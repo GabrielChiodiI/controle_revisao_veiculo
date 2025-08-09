@@ -3,6 +3,26 @@
     <div class="container mt-5">
       <form @submit.prevent="submit" class="mb-5 border rounded p-4 shadow-sm">
         <h2 class="mb-4">Cadastrar Revisão</h2>
+        <!-- Cliente -->
+        <div class="mb-3">
+          <label class="form-label">ID do Cliente</label>
+          <input v-model="form.id_cliente" type="number" min="1" class="form-control" required placeholder="Digite o ID do cliente">
+        </div>
+        <!-- Veículo -->
+        <div class="row mb-2">
+          <div class="col">
+            <input v-model="form.placa" type="text" class="form-control" required placeholder="Placa">
+          </div>
+          <div class="col">
+            <input v-model="form.marca" type="text" class="form-control" required placeholder="Marca">
+          </div>
+          <div class="col">
+            <input v-model="form.modelo" type="text" class="form-control" required placeholder="Modelo">
+          </div>
+          <div class="col">
+            <input v-model="form.ano" type="number" class="form-control" required placeholder="Ano">
+          </div>
+        </div>
         <div class="row mb-2">
           <div class="col">
             <input v-model="form.data_inicio" type="datetime-local" class="form-control" required placeholder="Data e Hora Início">
@@ -11,7 +31,6 @@
             <input v-model="form.quilometragem" type="number" class="form-control" required placeholder="Quilometragem">
           </div>
         </div>
-
         <!-- Serviços -->
         <div v-for="(servico, i) in form.servicos" :key="i" class="border p-3 my-2 rounded">
           <h5>Serviço {{ i + 1 }}</h5>
@@ -49,14 +68,17 @@
         </div>
       </form>
 
-      <!-- Tabela Revisões em andamento -->
+      <!-- Revisões em andamento -->
       <h1 class="mb-4">Revisões em andamento</h1>
       <table class="table table-striped table-bordered mb-5">
         <thead class="table-dark">
           <tr>
             <th>ID</th>
             <th>Data Início</th>
+            <th>Data Fim</th>
             <th>Quilometragem</th>
+            <th>Cliente</th>
+            <th>Placa</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -64,18 +86,19 @@
           <tr v-for="rev in revisoesAndamento" :key="rev.id_revisao">
             <td>{{ rev.id_revisao }}</td>
             <td>{{ rev.data_inicio }}</td>
+            <td>{{ rev.data_fim || '-' }}</td>
             <td>{{ rev.quilometragem }}</td>
+            <td>{{ rev.id_cliente }} - {{ rev.nome }} {{ rev.sobrenome }}</td>
+            <td>{{ rev.placa }}</td>
             <td>
-              <button class="btn btn-success btn-sm" @click="finalizarRevisao(rev.id_revisao)">
-                Finalizar
-              </button>
+              <button class="btn btn-success btn-sm" @click="finalizarRevisao(rev.id_revisao)">Finalizar</button>
             </td>
           </tr>
         </tbody>
       </table>
       <div v-if="!revisoesAndamento.length" class="alert alert-info">Nenhuma revisão em andamento.</div>
 
-      <!-- Tabela Revisões finalizadas -->
+      <!-- Revisões finalizadas -->
       <h1 class="mb-4">Revisões finalizadas</h1>
       <table class="table table-striped table-bordered">
         <thead class="table-dark">
@@ -84,6 +107,8 @@
             <th>Data Início</th>
             <th>Data Fim</th>
             <th>Quilometragem</th>
+            <th>Cliente</th>
+            <th>Placa</th>
           </tr>
         </thead>
         <tbody>
@@ -92,6 +117,8 @@
             <td>{{ rev.data_inicio }}</td>
             <td>{{ rev.data_fim }}</td>
             <td>{{ rev.quilometragem }}</td>
+            <td>{{ rev.id_cliente }} - {{ rev.nome }} {{ rev.sobrenome }}</td>
+            <td>{{ rev.placa }}</td>
           </tr>
         </tbody>
       </table>
@@ -101,26 +128,36 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { Inertia } from '@inertiajs/inertia'
-import DefaultLayout from '../../layouts/DefaultLayout.vue' // <-- caminho correto
+import DefaultLayout from '../../layouts/DefaultLayout.vue'
 
 const props = defineProps({
-  revisoes: {
-    type: Array,
-    required: true
-  }
+  revisoes: { type: Array, required: true },
+  clientes: { type: Array, required: true }
+})
+
+const revisoes = ref([])
+
+onMounted(async () => {
+  const resp = await fetch('/revisoes/todas-revisoes')
+  revisoes.value = await resp.json()
 })
 
 const revisoesAndamento = computed(() =>
-  props.revisoes.filter(r => !r.data_fim)
+  revisoes.value.filter(r => !r.data_fim)
 )
 const revisoesFinalizadas = computed(() =>
-  props.revisoes.filter(r => !!r.data_fim)
+  revisoes.value.filter(r => !!r.data_fim)
 )
 
 const form = useForm({
+  id_cliente: '',
+  placa: '',
+  marca: '',
+  modelo: '',
+  ano: '',
   data_inicio: '',
   quilometragem: '',
   servicos: [
@@ -147,12 +184,20 @@ function removerPeca(idx, jdx) {
 
 function submit() {
   form.post('/revisoes', {
-    onSuccess: () => form.reset()
+    onSuccess: async () => {
+      form.reset()
+      const resp = await fetch('/revisoes/todas-revisoes')
+      revisoes.value = await resp.json()
+    }
   })
 }
 
 function finalizarRevisao(id) {
-  Inertia.post(`/revisoes/${id}/finalizar`)
+  Inertia.post(`/revisoes/${id}/finalizar`, {}, {
+    onSuccess: async () => {
+      window.location.reload(true)
+    }
+  })
 }
 </script>
 
