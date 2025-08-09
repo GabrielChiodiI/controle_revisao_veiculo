@@ -15,7 +15,7 @@ CREATE TABLE veiculos (
     modelo VARCHAR(20),
     ano INTEGER,
     fk_cliente_id_cliente INTEGER,
-    FOREIGN KEY (fk_cliente_id_cliente) REFERENCES clientes(id_cliente) ON DELETE RESTRICT
+    FOREIGN KEY (fk_cliente_id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE
 );
 
 CREATE TABLE servicos (
@@ -42,8 +42,8 @@ CREATE TABLE realizas (
     fk_veiculo_placa VARCHAR(15),
     fk_revisao_id_revisao INTEGER,
     PRIMARY KEY (fk_veiculo_placa, fk_revisao_id_revisao),
-    FOREIGN KEY (fk_veiculo_placa) REFERENCES veiculos(placa) ON DELETE RESTRICT,
-    FOREIGN KEY (fk_revisao_id_revisao) REFERENCES revisoes(id_revisao) ON DELETE SET NULL
+    FOREIGN KEY (fk_veiculo_placa) REFERENCES veiculos(placa) ON DELETE CASCADE,
+    FOREIGN KEY (fk_revisao_id_revisao) REFERENCES revisoes(id_revisao) CASCADE
 );
 
 CREATE TABLE contems (
@@ -51,7 +51,7 @@ CREATE TABLE contems (
     fk_revisao_id_revisao INTEGER,
     PRIMARY KEY (fk_servico_id_servico, fk_revisao_id_revisao),
     FOREIGN KEY (fk_servico_id_servico) REFERENCES servicos(id_servico) ON DELETE RESTRICT,
-    FOREIGN KEY (fk_revisao_id_revisao) REFERENCES revisoes(id_revisao) ON DELETE SET NULL
+    FOREIGN KEY (fk_revisao_id_revisao) REFERENCES revisoes(id_revisao) ON DELETE CASCADE
 );
 
 CREATE TABLE precisas (
