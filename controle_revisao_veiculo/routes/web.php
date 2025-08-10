@@ -22,10 +22,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index']);
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
     Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
+    Route::get('/clientes/{id}/veiculos', [RevisaoController::class, 'veiculosDoCliente']);
     Route::get('/revisoes', [RevisaoController::class, 'index'])->name('revisoes.index');
     Route::get('/revisoes/todas-revisoes', [RevisaoController::class, 'todasRevisoes']);
     Route::post('/revisoes', [RevisaoController::class, 'store']);
     Route::post('/revisoes/{id}/finalizar', [RevisaoController::class, 'finalizar']);
+    Route::get('/revisoes/servicos', [RevisaoController::class, 'searchServicos']);
+    Route::get('/revisoes/pecas', [RevisaoController::class, 'searchPecas']);
+    Route::get('/revisoes/servicos/{id}/pecas-sugeridas', [RevisaoController::class, 'pecasDoServico']);
     Route::get('/relatorios', [RelatorioController::class, 'index'])->name('relatorios.index');
     Route::get('/relatorios/todos-veiculos', [RelatorioController::class, 'todosVeiculos']);
     Route::get('/relatorios/veiculos-por-pessoa', [RelatorioController::class, 'todosVeiculosPorPessoa']);
