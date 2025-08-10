@@ -35,4 +35,26 @@ class ClienteController extends Controller
         return redirect()->back();
     }
 
+    public function update(Request $request, Cliente $cliente)
+    {
+        $data = $request->validate([
+            'nome' => 'required|string|max:50',
+            'sobrenome' => 'required|string|max:50',
+            'cpf' => 'required|string|max:11',
+            'telefone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:50',
+            'data_nascimento' => 'nullable|date',
+            'sexo' => 'required|string|max:20',
+        ]);
+
+        $cliente->update($data);
+        return back();
+    }
+
+    public function destroy(Cliente $cliente)
+    {
+        $cliente->delete();
+        return back();
+    }
+
 }

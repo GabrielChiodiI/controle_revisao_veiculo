@@ -5,6 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\RevisaoController;
+use App\Http\Controllers\VeiculoController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/login', function () {
@@ -22,6 +23,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index']);
     Route::get('/clientes', [ClienteController::class, 'index'])->name('clientes.index');
     Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
+    Route::put('/clientes/{cliente}', [ClienteController::class, 'update'])->name('clientes.update');
+    Route::delete('/clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
+    Route::get('/clientes/{cliente}/veiculos', [VeiculoController::class, 'indexByCliente'])->name('clientes.veiculos.index');
+    Route::post('/clientes/{cliente}/veiculos', [VeiculoController::class, 'storeForCliente'])->name('clientes.veiculos.store');
+    Route::put('/clientes/{cliente}/veiculos/{veiculo:placa}', [VeiculoController::class, 'update'])->name('clientes.veiculos.update');
+    Route::delete('/clientes/{cliente}/veiculos/{veiculo:placa}', [VeiculoController::class, 'destroy'])->name('clientes.veiculos.destroy');
     Route::get('/clientes/{id}/veiculos', [RevisaoController::class, 'veiculosDoCliente']);
     Route::get('/revisoes', [RevisaoController::class, 'index'])->name('revisoes.index');
     Route::get('/revisoes/todas-revisoes', [RevisaoController::class, 'todasRevisoes']);
