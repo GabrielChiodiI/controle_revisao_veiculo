@@ -1,7 +1,7 @@
 <template>
   <DefaultLayout>
     <div class="container mt-5">
-      <h1 class="mb-4 text-center">Lista de Clientes</h1>
+      <h1 class="mb-3 text-center">Lista de Clientes</h1>
 
       <!-- Formulário (Cadastro / Edição inline) -->
       <div class="card p-4 mb-4 shadow-sm">
@@ -152,6 +152,20 @@
         </form>
       </div>
 
+      <!-- Busca -->
+      <form class="mb-4" @submit.prevent="buscar">
+        <div class="input-group">
+          <input
+            v-model.trim="qLocal"
+            type="search"
+            class="form-control"
+            placeholder="Buscar por nome ou sobrenome"
+          />
+          <button class="btn btn-outline-secondary" type="button" @click="limparBusca" v-if="qLocal">Limpar</button>
+          <button class="btn btn-primary" type="submit">Buscar</button>
+        </div>
+      </form>
+
       <!-- Tabela de clientes -->
       <div class="card p-3 shadow-sm">
         <table class="table mb-0 table-bordered align-middle">
@@ -163,11 +177,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="cliente in clientes" :key="cliente.id_cliente">
+            <tr v-for="cliente in clientes.data" :key="cliente.id_cliente">
               <td class="fw-semibold">{{ cliente.id_cliente }}</td>
               <td>{{ cliente.nome }} {{ cliente.sobrenome }}</td>
               <td class="text-nowrap">
-                <!-- Ver veículos -->
                 <Link
                   :href="`/clientes/${cliente.id_cliente}/veiculos`"
                   class="btn btn-sm btn-outline-secondary me-1"
@@ -176,7 +189,6 @@
                   <i class="bi bi-car-front"></i>
                 </Link>
 
-                <!-- Adicionar veículo -->
                 <Link
                   :href="`/clientes/${cliente.id_cliente}/veiculos`"
                   class="btn btn-sm btn-outline-success me-1"
@@ -185,7 +197,6 @@
                   <i class="bi bi-plus-square"></i>
                 </Link>
 
-                <!-- Editar inline -->
                 <button
                   class="btn btn-sm btn-outline-primary me-1"
                   title="Editar cliente"
@@ -194,7 +205,6 @@
                   <i class="bi bi-pencil-square"></i>
                 </button>
 
-                <!-- Excluir cliente -->
                 <button
                   class="btn btn-sm btn-outline-danger"
                   title="Excluir cliente"
@@ -206,8 +216,24 @@
             </tr>
           </tbody>
         </table>
-        <div v-if="!clientes.length" class="alert alert-info mt-3 mb-0 text-center rounded">
+
+        <div v-if="!clientes.data.length" class="alert alert-info mt-3 mb-0 text-center rounded">
           Nenhum cliente encontrado.
+        </div>
+
+        <!-- Paginação simples -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <button class="btn btn-outline-secondary"
+                  :disabled="clientes.current_page <= 1 || carregando"
+                  @click="irParaPagina(clientes.current_page - 1)">
+            « Anterior
+          </button>
+          <span class="text-muted">Página {{ clientes.current_page }}</span>
+          <button class="btn btn-outline-secondary"
+                  :disabled="!clientes.next_page_url || carregando"
+                  @click="irParaPagina(clientes.current_page + 1)">
+            Próxima »
+          </button>
         </div>
       </div>
     </div>
@@ -220,15 +246,16 @@ import { computed, reactive, watch, ref, nextTick } from 'vue'
 import DefaultLayout from '../../layouts/DefaultLayout.vue'
 
 const props = defineProps({
-  clientes: {
-    type: Array,
-    required: true
-  }
+  // Agora o backend envia um paginator (objeto), não array.
+  clientes: { type: Object, required: true },
+  q: { type: String, default: '' }
 })
 
-/* ---- estado de edição inline ---- */
+/* ---- estado de UI ---- */
 const isEditing = ref(false)
 const editId = ref(null)
+const carregando = ref(false)
+const qLocal = ref(props.q || '')
 
 /* ---- form compartilhado (create/update) ---- */
 const form = useForm({
@@ -267,9 +294,7 @@ const cpfFormatado = computed({
       .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4')
       .slice(0, 14)
   },
-  set(v) {
-    form.cpf = (v || '').replace(/\D/g, '').slice(0, 11)
-  }
+  set(v) { form.cpf = (v || '').replace(/\D/g, '').slice(0, 11) }
 })
 
 const telefoneFormatado = computed({
@@ -277,19 +302,15 @@ const telefoneFormatado = computed({
     if (!form.telefone) return ''
     const d = form.telefone.replace(/\D/g, '')
     if (d.length <= 10) {
-      return d
-        .replace(/^(\d{2})(\d)/, '($1) $2')
-        .replace(/^(\(\d{2}\)\s)(\d{4})(\d)/, '$1$2-$3')
-        .slice(0, 14)
+      return d.replace(/^(\d{2})(\d)/, '($1) $2')
+              .replace(/^(\(\d{2}\)\s)(\d{4})(\d)/, '$1$2-$3')
+              .slice(0, 14)
     }
-    return d
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(/^(\(\d{2}\)\s)(\d{5})(\d)/, '$1$2-$3')
-      .slice(0, 15)
+    return d.replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/^(\(\d{2}\)\s)(\d{5})(\d)/, '$1$2-$3')
+            .slice(0, 15)
   },
-  set(v) {
-    form.telefone = (v || '').replace(/\D/g, '').slice(0, 11)
-  }
+  set(v) { form.telefone = (v || '').replace(/\D/g, '').slice(0, 11) }
 })
 
 /* ---- validações ---- */
@@ -316,48 +337,74 @@ function resetTouched() {
   Object.keys(touched).forEach(k => touched[k] = false)
 }
 
+/* ---- busca ---- */
+function buscar(page = 1) {
+  carregando.value = true
+  router.get('/clientes', { q: qLocal.value || undefined, page },
+    { preserveScroll: true, preserveState: true, replace: true, onFinish: () => carregando.value = false })
+}
+function limparBusca() {
+  qLocal.value = ''
+  buscar(1)
+}
+
+/* ---- paginação ---- */
+function irParaPagina(page) {
+  if (page < 1) return
+  buscar(page)
+}
+
 /* ---- submit (POST/PUT) ---- */
 function submit() {
   Object.keys(touched).forEach(k => touched[k] = true)
   if (!canSubmit.value) return
 
   if (!isEditing.value) {
-    // CREATE
     form.post('/clientes', {
       onSuccess: () => {
-        form.reset()
-        resetTouched()
+        form.reset(); resetTouched()
+        // mantém filtros/página atuais
+        buscar(props.clientes.current_page || 1)
       }
     })
   } else {
-    // UPDATE
     form.put(`/clientes/${editId.value}`, {
       onSuccess: () => {
         isEditing.value = false
         editId.value = null
         form.reset()
         resetTouched()
-        // opcional: rolar para tabela
         nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+        buscar(props.clientes.current_page || 1)
       }
     })
   }
 }
 
-/* ---- carregar registro para edição inline ---- */
-function carregarParaEdicao(c) {
+/* ---- carregar registro para edição inline (usa /clientes/{id}) ---- */
+async function carregarParaEdicao(c) {
   isEditing.value = true
   editId.value = c.id_cliente
-
-  form.nome = c.nome || ''
-  form.sobrenome = c.sobrenome || ''
-  form.cpf = (c.cpf || '').replace(/\D/g, '').slice(0, 11)
-  form.telefone = (c.telefone || '').replace(/\D/g, '').slice(0, 11)
-  form.email = c.email || ''
-  form.data_nascimento = c.data_nascimento || ''
-  form.sexo = c.sexo || ''
-
   resetTouched()
+
+  try {
+    const resp = await fetch(`/clientes/${c.id_cliente}`, { headers: { 'Accept': 'application/json' } })
+    if (!resp.ok) throw new Error('Falha ao carregar cliente.')
+    const d = await resp.json()
+
+    form.nome = d.nome || ''
+    form.sobrenome = d.sobrenome || ''
+    form.cpf = (d.cpf || '').replace(/\D/g, '').slice(0, 11)
+    form.telefone = (d.telefone || '').replace(/\D/g, '').slice(0, 11)
+    form.email = d.email || ''
+    form.data_nascimento = d.data_nascimento || ''
+    form.sexo = d.sexo || ''
+  } catch (e) {
+    alert('Erro ao carregar dados do cliente.')
+    isEditing.value = false
+    editId.value = null
+  }
+
   nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
 }
 
@@ -372,6 +419,8 @@ function cancelarEdicao() {
 /* ---- excluir ---- */
 function excluir(c) {
   if (!confirm(`Excluir cliente #${c.id_cliente}? Isso removerá também seus veículos.`)) return
-  router.delete(`/clientes/${c.id_cliente}`)
+  router.delete(`/clientes/${c.id_cliente}`, {
+    onSuccess: () => buscar(props.clientes.current_page || 1)
+  })
 }
 </script>

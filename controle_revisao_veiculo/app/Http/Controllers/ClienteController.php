@@ -10,12 +10,32 @@ use Inertia\Inertia;
 
 class ClienteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $clientes = Cliente::all();
+        $q = $request->string('q')->toString();
+
+        $clientes = \App\Models\Cliente::query()
+            ->when($q, function ($qq) use ($q) {
+                $p = "%{$q}%";
+                $qq->where(function ($w) use ($p) {
+                    $w->where('nome', 'ILIKE', $p)
+                    ->orWhere('sobrenome', 'ILIKE', $p)
+                    ->orWhereRaw("lower(coalesce(nome,'') || ' ' || coalesce(sobrenome,'')) ILIKE ?", [$p]);
+                });
+            })
+            ->select(['id_cliente','nome','sobrenome'])
+            ->orderBy('id_cliente','desc')
+            ->simplePaginate(perPage: 10);
+
         return Inertia::render('clientes/Index', [
             'clientes' => $clientes,
+            'q' => $q,
         ]);
+    }
+
+    public function show(Cliente $cliente)
+    {
+        return response()->json($cliente);
     }
 
     public function store(Request $request)
