@@ -32,10 +32,12 @@ Route::middleware('auth')->group(function () {
     
     // REVISÕES / RELATÓRIOS (mantidos)
     Route::get('/revisoes/veiculos-do-cliente/{id}', [RevisaoController::class, 'veiculosDoCliente']);
-    Route::get('/revisoes',                          [RevisaoController::class, 'index'])->name('revisoes.index');
+    Route::get('/revisoes',                          [RevisaoController::class, 'index']);
+    Route::get('/revisoes/lista',                    [RevisaoController::class,'lista']);
+    Route::get('/revisoes/clientes',                 [RevisaoController::class,'clientes']);
     Route::get('/revisoes/todas-revisoes',           [RevisaoController::class, 'todasRevisoes']);
     Route::post('/revisoes',                         [RevisaoController::class, 'store']);
-    Route::put('/revisoes/{revisao}/finalizar', [RevisaoController::class, 'finalizar']);
+    Route::put('/revisoes/{revisao}/finalizar',      [RevisaoController::class, 'finalizar']);
     Route::get('/revisoes/servicos',                 [RevisaoController::class, 'searchServicos']);
     Route::get('/revisoes/pecas',                    [RevisaoController::class, 'searchPecas']);
     Route::get('/revisoes/servicos/{id}/pecas-sugeridas', [RevisaoController::class, 'pecasDoServico']);

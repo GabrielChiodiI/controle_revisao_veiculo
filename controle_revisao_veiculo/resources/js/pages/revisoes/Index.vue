@@ -279,9 +279,9 @@
         </div>
       </form>
 
-      <!-- Tabelas -->
-      <h1 class="mb-4">Revisões em andamento</h1>
-      <table class="table table-striped table-bordered mb-5">
+      <!-- Tabela ANDAMENTO -->
+      <h1 class="mb-3">Revisões em andamento</h1>
+      <table class="table table-striped table-bordered mb-2">
         <thead class="table-dark">
           <tr>
             <th>ID</th>
@@ -294,7 +294,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="rev in revisoesAndamento" :key="rev.id_revisao">
+          <tr v-for="rev in pag.andamento.data" :key="rev.id_revisao">
             <td>{{ rev.id_revisao }}</td>
             <td>{{ rev.data_inicio }}</td>
             <td>{{ rev.data_fim || '-' }}</td>
@@ -305,10 +305,24 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="!revisoesAndamento.length" class="alert alert-info">Nenhuma revisão em andamento.</div>
+      <div v-if="!pag.andamento.data.length" class="alert alert-info">Nenhuma revisão em andamento.</div>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-sm btn-outline-secondary"
+                :disabled="!pag.andamento.hasPrev"
+                @click="irParaPagina('andamento', pag.andamento.page - 1)">
+          « Anterior
+        </button>
+        <span class="align-self-center small">Página {{ pag.andamento.page }}</span>
+        <button class="btn btn-sm btn-outline-secondary"
+                :disabled="!pag.andamento.hasNext"
+                @click="irParaPagina('andamento', pag.andamento.page + 1)">
+          Próxima »
+        </button>
+      </div>
 
-      <h1 class="mb-4">Revisões finalizadas</h1>
-      <table class="table table-striped table-bordered">
+      <!-- Tabela FINALIZADAS -->
+      <h1 class="mb-3">Revisões finalizadas</h1>
+      <table class="table table-striped table-bordered mb-2">
         <thead class="table-dark">
           <tr>
             <th>ID</th>
@@ -321,7 +335,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="rev in revisoesFinalizadas" :key="rev.id_revisao">
+          <tr v-for="rev in pag.finalizadas.data" :key="rev.id_revisao">
             <td>{{ rev.id_revisao }}</td>
             <td>{{ rev.data_inicio }}</td>
             <td>{{ rev.data_fim }}</td>
@@ -334,7 +348,20 @@
           </tr>
         </tbody>
       </table>
-      <div v-if="!revisoesFinalizadas.length" class="alert alert-info">Nenhuma revisão finalizada.</div>
+      <div v-if="!pag.finalizadas.data.length" class="alert alert-info">Nenhuma revisão finalizada.</div>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <button class="btn btn-sm btn-outline-secondary"
+                :disabled="!pag.finalizadas.hasPrev"
+                @click="irParaPagina('finalizadas', pag.finalizadas.page - 1)">
+          « Anterior
+        </button>
+        <span class="align-self-center small">Página {{ pag.finalizadas.page }}</span>
+        <button class="btn btn-sm btn-outline-secondary"
+                :disabled="!pag.finalizadas.hasNext"
+                @click="irParaPagina('finalizadas', pag.finalizadas.page + 1)">
+          Próxima »
+        </button>
+      </div>
     </div>
 
     <!-- Modal Visualizar Revisão -->
@@ -411,12 +438,9 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useForm, router } from '@inertiajs/vue3'
 import DefaultLayout from '../../layouts/DefaultLayout.vue'
 
-const props = defineProps({
-  revisoes: { type: Array, required: true },
-  clientes: { type: Array, required: true }
-})
+defineProps({}) // nada vindo do servidor
 
-/* fetch JSON */
+/* fetch JSON helper */
 async function fetchJSON(url, init) {
   const resp = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' }, ...init })
   const ct = (resp.headers.get('content-type') || '').toLowerCase()
@@ -425,23 +449,7 @@ async function fetchJSON(url, init) {
   return await resp.json()
 }
 
-/* Revisões */
-const revisoes = ref([])
-onMounted(async () => {
-  try { revisoes.value = (await fetchJSON('/revisoes/todas-revisoes')) ?? [] }
-  catch(e){ console.error(e); revisoes.value = [] }
-})
-const revisoesAndamento = computed(() => revisoes.value.filter(r => !r.data_fim))
-const revisoesFinalizadas = computed(() => revisoes.value.filter(r => !!r.data_fim))
-
-function getDateTimeLocalNow() {
-  const now = new Date()
-  const offset = now.getTimezoneOffset()
-  const local = new Date(now.getTime() - offset * 60000)
-  return local.toISOString().slice(0, 16)
-}
-
-/* --------- Helpers de formatação --------- */
+/* --------- Helpers --------- */
 function formatIntBR(n){
   const s = String(Math.max(0, Number.isFinite(n) ? Math.trunc(n) : 0))
   return s.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -463,6 +471,12 @@ function formatKmViewFromDigits(digits){
   const int = clean.slice(0, -2) || '0'
   return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${dec}`
 }
+function getDateTimeLocalNow() {
+  const now = new Date()
+  const offset = now.getTimezoneOffset()
+  const local = new Date(now.getTime() - offset * 60000)
+  return local.toISOString().slice(0, 16)
+}
 
 /* --------- Form --------- */
 const form = useForm({
@@ -478,7 +492,7 @@ const form = useForm({
   ]
 })
 
-/* ------- KM (visual com 2 dec e sufixo, salva inteiro) ------- */
+/* ------- KM (visual) ------- */
 const KM_MAX = 1_000_000
 const quilometragemRawDigits = ref('0')
 const quilometragemView = computed(() => formatKmViewFromDigits(quilometragemRawDigits.value))
@@ -500,20 +514,12 @@ function onKmInput(e){
   syncKmToForm()
   e.target.value = quilometragemView.value
 }
-function onKmBlur(e){
-  e.target.value = quilometragemView.value
-}
+function onKmBlur(e){ e.target.value = quilometragemView.value }
 
-/* ------- Mão de obra / Preço (moeda BR com máscara) ------- */
+/* ------- Mão de obra / Preço ------- */
 const MONEY_MAX = 100_000
-function moneyInputToCents(evValue){
-  const digits = String(evValue || '').replace(/\D/g,'') || '0'
-  return Number(digits)
-}
-function clampMoneyCents(cents){
-  const maxCents = MONEY_MAX * 100
-  return Math.min(cents, maxCents)
-}
+function moneyInputToCents(evValue){ return Number((String(evValue || '').replace(/\D/g,'') || '0')) }
+function clampMoneyCents(cents){ return Math.min(cents, MONEY_MAX * 100) }
 function onMaoInput(i, e){
   const cents = clampMoneyCents(moneyInputToCents(e.target.value))
   form.servicos[i].valor_mao_de_obra = cents / 100
@@ -535,10 +541,7 @@ function onPrecoBlur(i, j){
   const cents = Math.round((form.servicos[i].pecas[j].preco||0)*100)
   form.servicos[i].pecas[j]._precoView = formatMoneyViewFromCents(clampMoneyCents(cents))
 }
-function formatMoneyNumber(n){
-  const v = Number(n) || 0
-  return formatMoneyViewFromNumber(v).replace(/^R\$ /,'')
-}
+function formatMoneyNumber(n){ return formatMoneyViewFromNumber(Number(n)||0).replace(/^R\$ /,'') }
 
 /* add/remove */
 function adicionarServico() {
@@ -548,63 +551,54 @@ function removerServico(i) { form.servicos.splice(i, 1) }
 function adicionarPeca(i) { form.servicos[i].pecas.push({ codigo: null, descricao: '', _search: '', _sugs: [], _showSug: false, _hi: 0, _touchedDesc: false, quantidade: 1, preco: 0, _precoView: 'R$ 0,00' }) }
 function removerPeca(i, j) { form.servicos[i].pecas.splice(j, 1) }
 
+/* -------- Submissão -------- */
 function submit() {
   form.post('/revisoes', {
     onSuccess: async () => {
       form.reset()
       quilometragemRawDigits.value = '0'
-      try { revisoes.value = (await fetchJSON('/revisoes/todas-revisoes')) ?? [] }
-      catch(e){ console.error(e) }
+      // recarrega a primeira página de cada status
+      await Promise.all([buscar('andamento', 1), buscar('finalizadas', 1)])
     }
   })
 }
-async function carregarRevisoes() {
-  try {
-    revisoes.value = (await fetchJSON('/revisoes/todas-revisoes')) ?? []
-  } catch (e) {
-    console.error(e)
-    revisoes.value = []
-  }
-}
-
-onMounted(carregarRevisoes)
-
 function finalizarRevisao(id) {
   router.put(`/revisoes/${id}/finalizar`, {}, {
     preserveScroll: true,
     preserveState: true,
-    onSuccess: () => {
-      carregarRevisoes()
-      console.log($page.props.flash.success)
+    onSuccess: async () => {
+      // permanece na página atual de cada lista
+      await Promise.all([
+        buscar('andamento', pag.andamento.page),
+        buscar('finalizadas', pag.finalizadas.page)
+      ])
     },
   })
 }
 
-/* Autocomplete Cliente */
+/* -------- Autocomplete Cliente (via endpoint) -------- */
+const clientesSug = ref([])
 const searchCliente = ref('')
 const showSugestoes = ref(false)
 const highlightedIndex = ref(-1)
 const autoRef = ref(null)
 
-const filteredClientes = computed(() => {
-  const q = (searchCliente.value || '').toLowerCase().trim()
-  if (!q) return props.clientes.slice(0, 10)
-  return props.clientes
-    .filter(c => {
-      const nome = (c.nome || '').toLowerCase()
-      const sobrenome = (c.sobrenome || '').toLowerCase()
-      const full = `${nome} ${sobrenome}`
-      const id = String(c.id_cliente)
-      return nome.includes(q) || sobrenome.includes(q) || full.includes(q) || id.startsWith(q)
-    })
-    .slice(0, 20)
-})
+async function carregarClientesSug () {
+  const q = encodeURIComponent(searchCliente.value || '')
+  try {
+    const r = await fetchJSON(`/revisoes/clientes?q=${q}`)
+    clientesSug.value = Array.isArray(r) ? r : []
+  } catch {
+    clientesSug.value = []
+  }
+}
+const filteredClientes = computed(() => clientesSug.value)
 const selecionadoNome = computed(() => {
-  if (!form.id_cliente) return ''
-  const c = props.clientes.find(x => x.id_cliente === form.id_cliente)
+  const c = clientesSug.value.find(x => x.id_cliente === form.id_cliente)
   return c ? `${c.nome} ${c.sobrenome}` : ''
 })
-function openSugestoes() { showSugestoes.value = true; highlightedIndex.value = filteredClientes.value.length ? 0 : -1 }
+function openSugestoes(){ showSugestoes.value = true; highlightedIndex.value = 0; carregarClientesSug() }
+watch(searchCliente, () => { if (showSugestoes.value) carregarClientesSug() })
 function selecionar(c) { form.id_cliente = c.id_cliente; searchCliente.value = `${c.nome} ${c.sobrenome}`; showSugestoes.value = false; highlightedIndex.value = -1 }
 function limparSelecao() { form.id_cliente = ''; searchCliente.value = ''; openSugestoes() }
 function mover(d) {
@@ -621,7 +615,7 @@ function onDocClick(e) { const el = autoRef.value; if (el && !el.contains(e.targ
 onMounted(() => document.addEventListener('click', onDocClick))
 onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
-/* Autocomplete Placa por Cliente */
+/* -------- Autocomplete Placa por Cliente -------- */
 const placaRef = ref(null)
 const placaSearch = ref('')
 const showPlacas = ref(false)
@@ -634,14 +628,12 @@ async function carregarVeiculosDoCliente(id){
   const data = await fetchJSON(`/revisoes/veiculos-do-cliente/${id}`)
   veiculosDoCliente.value = Array.isArray(data) ? data : []
 }
-
 watch(() => form.id_cliente, async (novo) => {
   form.placa = ''; placaSearch.value = ''
   form.marca = ''; form.modelo = ''; form.ano = ''
   showPlacas.value = false; highlightedPlacaIndex.value = -1
   if (novo) await carregarVeiculosDoCliente(novo)
 })
-
 const filteredPlacas = computed(() => {
   const q = (placaSearch.value || '').toLowerCase().trim()
   const base = Array.isArray(veiculosDoCliente.value) ? veiculosDoCliente.value : []
@@ -661,8 +653,7 @@ async function openPlacas() {
   highlightedPlacaIndex.value = filteredPlacas.value.length ? 0 : -1
 }
 function onPlacaInput() {
-  placaSearch.value = (placaSearch.value || '')
-    .toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,7)
+  placaSearch.value = (placaSearch.value || '').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,7)
   form.placa = placaSearch.value
   showPlacas.value = true
 }
@@ -691,6 +682,83 @@ function onDocClickPlaca(e) { const el = placaRef.value; if (el && !el.contains(
 onMounted(() => document.addEventListener('click', onDocClickPlaca))
 onBeforeUnmount(() => document.removeEventListener('click', onDocClickPlaca))
 
+/* -------- Validações -------- */
+const touched = reactive({ placa:false, marca:false, modelo:false, ano:false })
+const validPlaca = computed(() => /^[A-Z0-9]{7}$/.test(form.placa || ''))
+const validMarca = computed(() => (form.marca || '').length > 0 && (form.marca || '').length <= 20)
+const validModelo = computed(() => (form.modelo || '').length > 0 && (form.modelo || '').length <= 20)
+const validAno = computed(() => {
+  const a = Number(form.ano)
+  return Number.isInteger(a) && a >= 1900 && a <= 2100
+})
+function validServicoDesc(srv){ return (srv?._search || '').length > 0 && (srv?._search || '').length <= 60 }
+function validPecaDesc(pc){ return (pc?._search || '').length > 0 && (pc?._search || '').length <= 30 }
+const allValid = computed(() => {
+  if (!validPlaca.value || !validMarca.value || !validModelo.value || !validAno.value) return false
+  for (const s of form.servicos) {
+    if (!validServicoDesc(s)) return false
+    for (const p of (s.pecas || [])) {
+      if (!validPecaDesc(p)) return false
+    }
+  }
+  return true
+})
+
+/* ---------- Modal Visualizar ---------- */
+const showModal = ref(false)
+const loading = ref(false)
+const det = ref(null)
+async function abrirVisualizar(id){
+  showModal.value = true
+  loading.value = true
+  det.value = null
+  try { det.value = await fetchJSON(`/revisoes/${id}/detalhes`) }
+  catch (e) { console.error(e) }
+  finally { loading.value = false }
+}
+function fecharModal(){ showModal.value = false; det.value = null }
+const totalMaoObra = computed(() => {
+  if(!det.value?.servicos) return 0
+  return det.value.servicos.reduce((acc,s)=> acc + Number(s.valor_mao_de_obra||0), 0)
+})
+const totalPecas = computed(() => {
+  if(!det.value?.pecas || !det.value?.servicos) return 0
+  let sum = 0
+  for (const s of det.value.servicos) {
+    const pcs = det.value.pecas[s.id_servico] || []
+    for (const p of pcs) sum += Number(p.preco||0) * (Number(p.quantidade||1))
+  }
+  return sum
+})
+function money(v){ return formatMoneyViewFromNumber(Number(v||0)) }
+
+/* -------- Paginação AJAX (simplePaginate) -------- */
+const pag = reactive({
+  andamento:   { page: 1, data: [], hasPrev: false, hasNext: false },
+  finalizadas: { page: 1, data: [], hasPrev: false, hasNext: false },
+})
+
+async function buscar(status, page = 1) {
+  const r = await fetchJSON(`/revisoes/lista?status=${status}&page=${page}`)
+  const rows = Array.isArray(r?.data) ? r.data : (Array.isArray(r) ? r : [])
+  pag[status].data = rows
+  pag[status].page = r?.current_page ?? page
+  pag[status].hasPrev = !!r?.prev_page_url
+  pag[status].hasNext = !!r?.next_page_url
+}
+
+function irParaPagina(status, page) {
+  if (page < 1) return
+  if (page > pag[status].page && !pag[status].hasNext) return
+  if (page < pag[status].page && !pag[status].hasPrev) return
+  buscar(status, page)
+}
+
+onMounted(() => {
+  buscar('andamento', 1)
+  buscar('finalizadas', 1)
+})
+
 /* -------- Serviços (autocomplete dinâmico) -------- */
 async function buscarServicos(i) {
   const srv = form.servicos[i]
@@ -701,7 +769,7 @@ async function buscarServicos(i) {
     const r = await fetchJSON(`/revisoes/servicos?q=${q}`)
     srv._sugs = Array.isArray(r) ? r : (r?.data ?? [])
   } catch (e) {
-    console.error(e); srv._sugs = []
+    console.error('servicos', e); srv._sugs = []
   }
 }
 async function abrirSugestaoServ(i){
@@ -738,7 +806,7 @@ async function buscarPecas(i, j){
     const r = await fetchJSON(`/revisoes/pecas?q=${q}${sid}`)
     pc._sugs = Array.isArray(r) ? r : (r?.data ?? [])
   } catch (e) {
-    console.error(e); pc._sugs = []
+    console.error('pecas', e); pc._sugs = []
   }
 }
 async function abrirSugPeca(i,j){
@@ -760,68 +828,9 @@ function selecionarPeca(i,j,p){
   pc.codigo = p.codigo
   pc.descricao = p.descricao
   pc.preco = Number(p.preco ?? 0)
-  pc._precoView = formatMoneyViewFromNumber(pc.preco)
+  pc._precoView = formatMoneyNumber(pc.preco)
   if (!pc.quantidade || pc.quantidade < 1) pc.quantidade = 1
   pc._search = (p.descricao || '').slice(0, 30)
   pc._showSug = false
 }
-
-/* -------- Validações -------- */
-const touched = reactive({ placa:false, marca:false, modelo:false, ano:false })
-
-const validPlaca = computed(() => /^[A-Z0-9]{7}$/.test(form.placa || ''))
-const validMarca = computed(() => (form.marca || '').length > 0 && (form.marca || '').length <= 20)
-const validModelo = computed(() => (form.modelo || '').length > 0 && (form.modelo || '').length <= 20)
-const validAno = computed(() => {
-  const a = Number(form.ano)
-  return Number.isInteger(a) && a >= 1900 && a <= 2100
-})
-
-function validServicoDesc(srv){ return (srv?._search || '').length > 0 && (srv?._search || '').length <= 60 }
-function validPecaDesc(pc){ return (pc?._search || '').length > 0 && (pc?._search || '').length <= 30 }
-
-const allValid = computed(() => {
-  if (!validPlaca.value || !validMarca.value || !validModelo.value || !validAno.value) return false
-  for (const s of form.servicos) {
-    if (!validServicoDesc(s)) return false
-    for (const p of (s.pecas || [])) {
-      if (!validPecaDesc(p)) return false
-    }
-  }
-  return true
-})
-
-/* ---------- Modal Visualizar ---------- */
-const showModal = ref(false)
-const loading = ref(false)
-const det = ref(null) // { revisao, servicos, pecas: { [id_servico]: [] } }
-
-async function abrirVisualizar(id){
-  showModal.value = true
-  loading.value = true
-  det.value = null
-  try {
-    det.value = await fetchJSON(`/revisoes/${id}/detalhes`)
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
-}
-function fecharModal(){ showModal.value = false; det.value = null }
-
-const totalMaoObra = computed(() => {
-  if(!det.value?.servicos) return 0
-  return det.value.servicos.reduce((acc,s)=> acc + Number(s.valor_mao_de_obra||0), 0)
-})
-const totalPecas = computed(() => {
-  if(!det.value?.pecas || !det.value?.servicos) return 0
-  let sum = 0
-  for (const s of det.value.servicos) {
-    const pcs = det.value.pecas[s.id_servico] || []
-    for (const p of pcs) sum += Number(p.preco||0) * (Number(p.quantidade||1))
-  }
-  return sum
-})
-function money(v){ return formatMoneyViewFromNumber(Number(v||0)) }
 </script>

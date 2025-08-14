@@ -1,67 +1,86 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Cliente;
-use App\Models\Veiculo;
-use App\Models\Realiza;
-use App\Models\Revisao;
-use App\Models\Servico;
-use App\Models\Peca;
-use App\Models\Contem;
-use App\Models\Precisa;
 use Illuminate\Support\Facades\DB;
+use App\Models\{Cliente, Veiculo, Realiza, Revisao, Servico, Peca, Contem, Precisa};
 
 class RevisaoController extends Controller
 {
-    public function index()
+    // Só renderiza a página. Sem queries.
+    public function index(Request $request)
     {
-        $revisoes = Revisao::all();
-
-        $clientes = Cliente::select('id_cliente','nome','sobrenome')
-            ->orderBy('nome')
-            ->orderBy('sobrenome')
-            ->get();
-
         return Inertia::render('revisoes/Index', [
-            'revisoes' => $revisoes,
-            'clientes' => $clientes,
+            'q' => (string) $request->get('q', '')
         ]);
     }
 
+    // Sugestões de clientes (auto-complete) – leve e com unaccent
+    public function clientes(Request $r)
+    {
+        $q = trim($r->string('q')->toString());
+
+        return \App\Models\Cliente::query()
+            ->when($q !== '', function ($w) use ($q) {
+                $p = "%{$q}%";
+                $w->where(function ($s) use ($p) {
+                    $s->where('nome', 'ILIKE', $p)
+                    ->orWhere('sobrenome', 'ILIKE', $p)
+                    ->orWhereRaw("LOWER(COALESCE(nome,'') || ' ' || COALESCE(sobrenome,'')) ILIKE ?", [$p]);
+                });
+            })
+            ->orderBy('nome')->orderBy('sobrenome')
+            ->limit(20)
+            ->get(['id_cliente','nome','sobrenome']);
+    }
+
+    // Veículos de um cliente (já existia)
     public function veiculosDoCliente($id)
     {
-        $veiculos = \App\Models\Veiculo::where('fk_cliente_id_cliente', $id)
+        return Veiculo::where('fk_cliente_id_cliente', $id)
             ->select('placa','marca','modelo','ano')
             ->orderBy('placa')
             ->get();
-
-        return response()->json($veiculos);
     }
 
-    public function todasRevisoes()
+    // Lista paginada de revisões (status = andamento|finalizadas)
+   public function lista(Request $r)
     {
-        $revisoes = DB::table('revisoes')
-            ->join('realizas', 'revisoes.id_revisao', '=', 'realizas.fk_revisao_id_revisao')
-            ->join('veiculos', 'realizas.fk_veiculo_placa', '=', 'veiculos.placa')
-            ->join('clientes', 'veiculos.fk_cliente_id_cliente', '=', 'clientes.id_cliente')
-            ->select(
-                'revisoes.id_revisao',
-                DB::raw("TO_CHAR(revisoes.data_inicio, 'DD/MM/YYYY HH24:MI') as data_inicio"),
-                DB::raw("TO_CHAR(revisoes.data_fim, 'DD/MM/YYYY HH24:MI') as data_fim"),
-                'revisoes.quilometragem',
-                'clientes.id_cliente',
-                'clientes.nome',
-                'clientes.sobrenome',
-                'veiculos.placa'
-            )
-            ->get();
+        $status  = trim($r->string('status')->toString()); // andamento|finalizadas|''(todas)
+        $q       = trim($r->string('q')->toString());
+        $perPage = max(1, min(50, (int) $r->get('per_page', 10)));
 
-        return response()->json($revisoes);
+        $rows = \DB::table('revisoes as r')
+            ->join('realizas as rl', 'rl.fk_revisao_id_revisao', '=', 'r.id_revisao')
+            ->join('veiculos as v', 'v.placa', '=', 'rl.fk_veiculo_placa')
+            ->join('clientes as c', 'c.id_cliente', '=', 'v.fk_cliente_id_cliente')
+            ->when($status === 'andamento',   fn($w) => $w->whereNull('r.data_fim'))
+            ->when($status === 'finalizadas', fn($w) => $w->whereNotNull('r.data_fim'))
+            ->when($q !== '', function ($w) use ($q) {
+                $p = "%{$q}%";
+                $w->where(function ($s) use ($p) {
+                    $s->where('c.nome', 'ILIKE', $p)
+                    ->orWhere('c.sobrenome', 'ILIKE', $p)
+                    ->orWhere('v.placa', 'ILIKE', $p)
+                    ->orWhereRaw("LOWER(COALESCE(c.nome,'') || ' ' || COALESCE(c.sobrenome,'')) ILIKE ?", [$p]);
+                });
+            })
+            ->select(
+                'r.id_revisao',
+                \DB::raw("TO_CHAR(r.data_inicio, 'DD/MM/YYYY HH24:MI') as data_inicio"),
+                \DB::raw("TO_CHAR(r.data_fim, 'DD/MM/YYYY HH24:MI') as data_fim"),
+                'r.quilometragem',
+                'c.id_cliente','c.nome','c.sobrenome',
+                'v.placa'
+            )
+            ->orderByDesc('r.id_revisao')
+            ->simplePaginate($perPage);
+
+        return response()->json($rows);
     }
 
+    // (mantido) busca serviços
     public function searchServicos(Request $r)
     {
         $q = trim($r->get('q',''));
@@ -69,39 +88,28 @@ class RevisaoController extends Controller
             ->orderBy('descricao')->limit(20)->get(['id_servico','descricao','valor_mao_de_obra']);
     }
 
+    // (mantido) busca peças
     public function searchPecas(Request $r)
     {
         $q = trim($r->get('q',''));
         $servicoId = $r->get('servico_id');
 
         $base = Peca::query();
-
         $base->when($servicoId || $q !== '', function ($qq) use ($servicoId, $q) {
             $qq->where(function ($w) use ($servicoId, $q) {
                 if ($servicoId) {
                     $w->orWhereIn('codigo', function($s) use ($servicoId){
                         $s->select('fk_peca_codigo')->from('precisas')
-                        ->where('fk_servico_id_servico', $servicoId);
+                          ->where('fk_servico_id_servico', $servicoId);
                     });
                 }
-                if ($q !== '') {
-                    $w->orWhere('descricao','ILIKE',"%{$q}%");
-                }
+                if ($q !== '') $w->orWhere('descricao','ILIKE',"%{$q}%");
             });
         });
 
-        return $base->orderBy('descricao')
-            ->limit(20)
-            ->get(['codigo','descricao','preco']);
+        return $base->orderBy('descricao')->limit(20)->get(['codigo','descricao','preco']);
     }
 
-    public function pecasDoServico($id)
-    {
-        return Peca::select('pecas.codigo','pecas.descricao','pecas.preco')
-            ->join('precisas','precisas.fk_peca_codigo','=','pecas.codigo')
-            ->where('precisas.fk_servico_id_servico',$id)
-            ->orderBy('descricao')->get();
-    }
 
     public function store(Request $request)
     {
