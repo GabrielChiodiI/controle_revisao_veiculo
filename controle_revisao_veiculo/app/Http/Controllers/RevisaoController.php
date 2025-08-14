@@ -49,8 +49,8 @@ class RevisaoController extends Controller
             ->join('clientes', 'veiculos.fk_cliente_id_cliente', '=', 'clientes.id_cliente')
             ->select(
                 'revisoes.id_revisao',
-                'revisoes.data_inicio',
-                'revisoes.data_fim',
+                DB::raw("TO_CHAR(revisoes.data_inicio, 'DD/MM/YYYY HH24:MI') as data_inicio"),
+                DB::raw("TO_CHAR(revisoes.data_fim, 'DD/MM/YYYY HH24:MI') as data_fim"),
                 'revisoes.quilometragem',
                 'clientes.id_cliente',
                 'clientes.nome',
@@ -195,11 +195,61 @@ class RevisaoController extends Controller
         }
     }
 
-    public function finalizar($id)
+    public function detalhes($id)
+    {
+        $rev = \DB::table('revisoes as r')
+            ->join('realizas as rl', 'rl.fk_revisao_id_revisao', '=', 'r.id_revisao')
+            ->join('veiculos as v', 'v.placa', '=', 'rl.fk_veiculo_placa')
+            ->join('clientes as c', 'c.id_cliente', '=', 'v.fk_cliente_id_cliente')
+            ->where('r.id_revisao', $id)
+            ->select('r.id_revisao','r.data_inicio','r.data_fim','r.quilometragem',
+                    'v.placa','v.marca','v.modelo','v.ano',
+                    'c.id_cliente','c.nome','c.sobrenome')
+            ->first();
+
+        if (!$rev) return response()->json(['message' => 'Revisão não encontrada'], 404);
+
+        $servicos = \DB::table('contems as ct')
+            ->join('servicos as s', 's.id_servico', '=', 'ct.fk_servico_id_servico')
+            ->where('ct.fk_revisao_id_revisao', $id)
+            ->select('s.id_servico','s.descricao','s.valor_mao_de_obra')
+            ->get();
+
+        $ids = $servicos->pluck('id_servico')->all();
+        $pecasPorServico = [];
+        if (!empty($ids)) {
+            $rows = \DB::table('precisas as pr')
+                ->join('pecas as p', 'p.codigo', '=', 'pr.fk_peca_codigo')
+                ->whereIn('pr.fk_servico_id_servico', $ids)
+                ->select('pr.fk_servico_id_servico as sid','p.codigo','p.descricao','p.preco','p.quantidade')
+                ->get();
+
+            foreach ($rows as $r) {
+                $pecasPorServico[$r->sid][] = (object)[
+                    'codigo'=>$r->codigo,'descricao'=>$r->descricao,
+                    'preco'=>$r->preco,'quantidade'=>$r->quantidade
+                ];
+            }
+            // garante array vazio para serviços sem peças
+            foreach ($ids as $sid) $pecasPorServico[$sid] = $pecasPorServico[$sid] ?? [];
+        }
+
+        return response()->json([
+            'revisao'  => $rev,
+            'servicos' => $servicos,
+            'pecas'    => $pecasPorServico,
+        ]);
+    }
+
+
+    public function finalizar(Request $request, $id)
     {
         $revisao = Revisao::findOrFail($id);
-        $revisao->data_fim = now();
+
+        // sempre a hora do clique (servidor é a fonte da verdade)
+        $revisao->fill(['data_fim' => now()]);
         $revisao->save();
-        return redirect()->back()->with('success', 'Revisão finalizada com sucesso');
+
+        return back(303)->with('success', 'Revisão finalizada com sucesso');
     }
 }

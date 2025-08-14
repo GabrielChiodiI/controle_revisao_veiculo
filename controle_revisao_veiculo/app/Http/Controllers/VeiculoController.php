@@ -30,7 +30,8 @@ class VeiculoController extends Controller
         $data['fk_cliente_id_cliente'] = $cliente->id_cliente;
         Veiculo::create($data);
 
-        return back();
+        
+        return back(303)->with('success','Veículo adicionado.');
     }
 
     public function update(Request $request, \App\Models\Cliente $cliente, \App\Models\Veiculo $veiculo)
@@ -49,7 +50,7 @@ class VeiculoController extends Controller
         $veiculo->fill($data);
         $veiculo->save();
 
-        return back();
+        return back(303)->with('success','Veículo atualizado.');
     }
 
     public function destroy(\App\Models\Cliente $cliente, \App\Models\Veiculo $veiculo)
@@ -59,7 +60,7 @@ class VeiculoController extends Controller
             abort(404);
         }
         $veiculo->delete();
-        return back();
+        return back(303)->with('success','Veículo excluído.');
     }
 
 }

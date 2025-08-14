@@ -32,7 +32,7 @@ class ClienteController extends Controller
 
         \App\Models\Cliente::create($data);
 
-        return redirect()->back();
+        return back(303)->with('success', 'Cliente criado.');
     }
 
     public function update(Request $request, Cliente $cliente)
@@ -48,13 +48,13 @@ class ClienteController extends Controller
         ]);
 
         $cliente->update($data);
-        return back();
+        return back(303)->with('success', 'Cliente atualizado.');
     }
 
     public function destroy(Cliente $cliente)
     {
         $cliente->delete();
-        return back();
+        return back(303)->with('success', 'Cliente excluído.');
     }
 
 }

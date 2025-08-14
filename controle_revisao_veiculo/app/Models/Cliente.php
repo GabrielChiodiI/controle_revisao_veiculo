@@ -10,17 +10,10 @@ class Cliente extends Model
     protected $primaryKey = 'id_cliente';
     public $timestamps = false;
 
-    protected $fillable = [
-        'nome',
-        'sobrenome',
-        'cpf',
-        'telefone',
-        'email',
-        'data_nascimento',
-        'sexo',
-    ];
+    protected $fillable = ['nome','sobrenome','cpf','telefone','email','data_nascimento','sexo'];
 
-    // Relacionamento: Cliente tem muitos Veiculos
+    public function getRouteKeyName() { return 'id_cliente'; } // binding por id_cliente
+
     public function veiculos()
     {
         return $this->hasMany(Veiculo::class, 'fk_cliente_id_cliente', 'id_cliente');
